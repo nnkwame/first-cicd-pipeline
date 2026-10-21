@@ -3,8 +3,7 @@ name: Deploy to EC2
 on:
   push:
     tags:
-      - "v*"
-
+      - "v[0-9]+.[0-9]+.[0-9]+"
 jobs:
 
   deploy:
@@ -20,6 +19,9 @@ jobs:
           TAG=${GITHUB_REF#refs/tags/}
           echo "Deploying version: $TAG"
           echo "$TAG" > app/version.txt
+      
+      - name: Check syntax
+        run: node --check app/server.js
 
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -42,3 +44,7 @@ jobs:
             npm install --omit=dev
             pm2 restart cicd-app || pm2 start server.js --name cicd-app
             echo "Deployed $(cat version.txt)"
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "Deployment of ${{ github.ref_name }} failed!"
